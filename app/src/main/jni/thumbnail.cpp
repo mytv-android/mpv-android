@@ -14,7 +14,7 @@ extern "C" {
 #include "log.h"
 
 extern "C" {
-    jni_func(jobject, grabThumbnail, jint dimension);
+    jni_func(jobject, grabThumbnail, jlong handle, jint dimension);
 };
 
 static inline mpv_node make_node_str(const char *s)
@@ -25,8 +25,12 @@ static inline mpv_node make_node_str(const char *s)
     return r;
 }
 
-jni_func(jobject, grabThumbnail, jint dimension) {
-    CHECK_MPV_INIT();
+jni_func(jobject, grabThumbnail, jlong handle, jint dimension) {
+    MpvInstance *inst = instance_get(handle);
+    if (!inst || !inst->mpv) {
+        ALOGE("libmpv instance %lld is not initialized", (long long) handle);
+        return NULL;
+    }
 
     mpv_node result{};
     {
@@ -38,7 +42,7 @@ jni_func(jobject, grabThumbnail, jint dimension) {
         c_array.values = c_args;
         c.format = MPV_FORMAT_NODE_ARRAY;
         c.u.list = &c_array;
-        if (mpv_command_node(g_mpv, &c, &result) < 0) {
+        if (mpv_command_node(inst->mpv, &c, &result) < 0) {
             ALOGE("screenshot-raw command failed");
             return NULL;
         }
